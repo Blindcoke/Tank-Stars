@@ -26,10 +26,11 @@ import java.util.Objects;
 import static java.lang.Thread.sleep;
 
 public class BattleScreenComputer extends TankStarsScreen {
+
     private int aiDecisionTimer = 0;
     private static final int DECISION_INTERVAL = 60; // Make a decision every second (assuming 60 FPS)
     private Random random = new Random();
-
+    private boolean canPlayerShoot = true;
     int winner;
 
     private Batch batch;
@@ -152,7 +153,7 @@ public class BattleScreenComputer extends TankStarsScreen {
         leftBorderDef.type = BodyDef.BodyType.StaticBody;
         leftBorderDef.position.set(new Vector2(0, 0));
         Body leftBorder = world.createBody(leftBorderDef);
-        
+
         PolygonShape leftBorderShape = new PolygonShape();
         leftBorderShape.setAsBox(1, 540 / 2f); // Height of the screen is 540
         FixtureDef leftFixtureDef = new FixtureDef();
@@ -166,7 +167,7 @@ public class BattleScreenComputer extends TankStarsScreen {
         rightBorderDef.type = BodyDef.BodyType.StaticBody;
         rightBorderDef.position.set(new Vector2(960, 0)); // Width of the screen is 960
         Body rightBorder = world.createBody(rightBorderDef);
-        
+
         PolygonShape rightBorderShape = new PolygonShape();
         rightBorderShape.setAsBox(1, 540 / 2f);
         FixtureDef rightFixtureDef = new FixtureDef();
@@ -352,320 +353,306 @@ public class BattleScreenComputer extends TankStarsScreen {
                     playerTank.getBody().setLinearVelocity(vec);
                 }
                 if (keycode == Input.Keys.G) {
-                    System.out.println("Shoot hold timer: " + shootHoldTimer);
-                    if (Objects.equals(playerTank.getTankName(), "Buratino")) {
-                        createBullet(playerTank.getBulletType().getSpeed(), 0);
-                    } else if (Objects.equals(playerTank.getTankName(), "Spectre")) {
-                        createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed());
-                    } else {
-                        createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed() * 2.0f);
-                        createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed());
-                        createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed() * 0.75f);
+                    // Only allow shooting if it's the player's turn and they are allowed to shoot
+                    if (Config.getInstance().isPlayerOnesTurn() && canPlayerShoot) {
+                        System.out.println("Shoot hold timer: " + shootHoldTimer);
+                        if (Objects.equals(playerTank.getTankName(), "Buratino")) {
+                            createBullet(playerTank.getBulletType().getSpeed(), 0);
+                        } else if (Objects.equals(playerTank.getTankName(), "Spectre")) {
+                            createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed());
+                        } else {
+                            createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed() * 2.0f);
+                            createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed());
+                            createBullet(playerTank.getBulletType().getSpeed(), playerTank.getBulletType().getSpeed() * 0.75f);
+                        }
+
+                        // Prevent player from shooting again until computer's turn
+                        canPlayerShoot = false;
+                        Config.getInstance().setPlayerTwosTurn();
                     }
-                    Config.getInstance().setPlayerTwosTurn();
                 }
                 return true;
             }
         };
-        }
-        private void processAITurn(float delta) {
-            aiDecisionTimer++;
+    }
 
-            // Only make decisions at set intervals
-            if (aiDecisionTimer >= DECISION_INTERVAL) {
-                aiDecisionTimer = 0;
+    private void processAITurn(float delta) {
+        aiDecisionTimer++;
 
-                // Get tank positions
-                Vector2 enemyPosition = enemyTank.getBody().getPosition();
-                Vector2 playerPosition = playerTank.getBody().getPosition();
+        // Only make decisions at set intervals
+        if (aiDecisionTimer >= DECISION_INTERVAL) {
+            aiDecisionTimer = 0;
 
-                // Calculate distance between tanks
-                float distance = Math.abs(playerPosition.x - enemyPosition.x);
+            // Get tank positions
+            Vector2 enemyPosition = enemyTank.getBody().getPosition();
+            Vector2 playerPosition = playerTank.getBody().getPosition();
 
-                // Decision making strategy
-                if (enemyTank.getFuelCapacity() > 0) {
-                    // Movement strategy
-                    if (distance > 300) {  // If too far, move closer
-                        moveAITankTowardsPlayer(playerPosition, enemyPosition);
-                    } else if (distance < 200) {  // If too close, create some distance
-                        moveAITankAwayFromPlayer(playerPosition, enemyPosition);
-                    }
+            // Calculate distance between tanks
+            float distance = Math.abs(playerPosition.x - enemyPosition.x);
+
+            // Decision making strategy
+            if (enemyTank.getFuelCapacity() > 0) {
+                // Movement strategy
+                if (distance > 300) {  // If too far, move closer
+                    moveAITankTowardsPlayer(playerPosition, enemyPosition);
+                } else if (distance < 200) {  // If too close, create some distance
+                    moveAITankAwayFromPlayer(playerPosition, enemyPosition);
                 }
-
-                // Shooting strategy
-                decideAIShootingStrategy(distance);
             }
-        }
 
-        private void moveAITankTowardsPlayer(Vector2 playerPos, Vector2 enemyPos) {
-            if (playerPos.x < enemyPos.x && enemyTank.getFuelCapacity() > 0) {
-                // Move left towards player
-                enemyTank.getBody().applyLinearImpulse((float) -enemyTank.getMoveSpeed(), 0, 
+            // Shooting strategy
+            decideAIShootingStrategy(distance);
+        }
+    }
+
+    private void moveAITankTowardsPlayer(Vector2 playerPos, Vector2 enemyPos) {
+        if (playerPos.x < enemyPos.x && enemyTank.getFuelCapacity() > 0) {
+            // Move left towards player
+            enemyTank.getBody().applyLinearImpulse((float) -enemyTank.getMoveSpeed(), 0,
                     enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
-                enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
-                System.out.println("AI Tank moving left. Fuel: " + enemyTank.getFuelCapacity());
-            } else if (playerPos.x > enemyPos.x && enemyTank.getFuelCapacity() > 0) {
-                // Move right towards player
-                enemyTank.getBody().applyLinearImpulse((float) enemyTank.getMoveSpeed(), 0, 
+            enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
+            System.out.println("AI Tank moving left. Fuel: " + enemyTank.getFuelCapacity());
+        } else if (playerPos.x > enemyPos.x && enemyTank.getFuelCapacity() > 0) {
+            // Move right towards player
+            enemyTank.getBody().applyLinearImpulse((float) enemyTank.getMoveSpeed(), 0,
                     enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
-                enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
-                System.out.println("AI Tank moving right. Fuel: " + enemyTank.getFuelCapacity());
-            }
+            enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
+            System.out.println("AI Tank moving right. Fuel: " + enemyTank.getFuelCapacity());
         }
+    }
 
-        private void moveAITankAwayFromPlayer(Vector2 playerPos, Vector2 enemyPos) {
-            if (playerPos.x < enemyPos.x && enemyTank.getFuelCapacity() > 0) {
-                // Move right to create distance
-                enemyTank.getBody().applyLinearImpulse((float) enemyTank.getMoveSpeed(), 0, 
+    private void moveAITankAwayFromPlayer(Vector2 playerPos, Vector2 enemyPos) {
+        if (playerPos.x < enemyPos.x && enemyTank.getFuelCapacity() > 0) {
+            // Move right to create distance
+            enemyTank.getBody().applyLinearImpulse((float) enemyTank.getMoveSpeed(), 0,
                     enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
-                enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
-                System.out.println("AI Tank creating distance. Fuel: " + enemyTank.getFuelCapacity());
-            } else if (playerPos.x > enemyPos.x && enemyTank.getFuelCapacity() > 0) {
-                // Move left to create distance
-                enemyTank.getBody().applyLinearImpulse((float) -enemyTank.getMoveSpeed(), 0, 
+            enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
+            System.out.println("AI Tank creating distance. Fuel: " + enemyTank.getFuelCapacity());
+        } else if (playerPos.x > enemyPos.x && enemyTank.getFuelCapacity() > 0) {
+            // Move left to create distance
+            enemyTank.getBody().applyLinearImpulse((float) -enemyTank.getMoveSpeed(), 0,
                     enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
-                enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
-                System.out.println("AI Tank creating distance. Fuel: " + enemyTank.getFuelCapacity());
-            }
+            enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
+            System.out.println("AI Tank creating distance. Fuel: " + enemyTank.getFuelCapacity());
         }
+    }
 
-        private void decideAIShootingStrategy(float distance) {
-            // Shooting probability based on distance and tank health
-            float shootProbability = calculateAIShootProbability(distance);
+    private void decideAIShootingStrategy(float distance) {
+        // Shooting probability based on distance and tank health
+        float shootProbability = calculateAIShootProbability(distance);
 
-            // Random chance to shoot
-            if (new Random().nextFloat() < shootProbability) {
-                System.out.println("AI deciding to shoot...");
-                shootHoldTimer = calculateAIShootHoldTime(distance);
-                simulateAIShoot();
-            }
+        // Random chance to shoot
+        if (new Random().nextFloat() < shootProbability) {
+            System.out.println("AI deciding to shoot...");
+            shootHoldTimer = calculateAIShootHoldTime(distance);
+            simulateAIShoot();
         }
+    }
 
-        private float calculateAIShootProbability(float distance) {
-            // Higher probability when closer, lower when far
-            float baseProbability = 1.0f - (distance / 1000f);
-            
-            // Factor in tank health - more likely to shoot when health is low
-            float healthFactor = 1.0f - (enemyTank.getCurrentHealth() / (float)enemyTank.getHealthCapacity());
-            
-            return Math.min(baseProbability * (1 + healthFactor), 1.0f);
+    private float calculateAIShootProbability(float distance) {
+        // Higher probability when closer, lower when far
+        float baseProbability = 1.0f - (distance / 1000f);
+
+        // Factor in tank health - more likely to shoot when health is low
+        float healthFactor = 1.0f - (enemyTank.getCurrentHealth() / (float) enemyTank.getHealthCapacity());
+
+        return Math.min(baseProbability * (1 + healthFactor), 1.0f);
+    }
+
+    private float calculateAIShootHoldTime(float distance) {
+        // Hold time varies based on distance
+        // Closer distance means less hold time, farther means more charge
+        return Math.max(0.5f, Math.min(2.0f, distance / 300f));
+    }
+
+    private void simulateAIShoot() {
+        if (Objects.equals(enemyTank.getTankName(), "Buratino")) {
+            createEnemyBullet(enemyTank.getBulletType().getSpeed(), 0);
+        } else if (Objects.equals(enemyTank.getTankName(), "Spectre")) {
+            createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed());
+        } else {
+            createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed() * 2.0f);
+            createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed());
+            createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed() * 0.75f);
         }
-
-        private float calculateAIShootHoldTime(float distance) {
-            // Hold time varies based on distance
-            // Closer distance means less hold time, farther means more charge
-            return Math.max(0.5f, Math.min(2.0f, distance / 300f));
-        }
-
-        private void simulateAIShoot() {
-            if (Objects.equals(enemyTank.getTankName(), "Buratino")) {
-                createEnemyBullet(enemyTank.getBulletType().getSpeed(), 0);
-            } else if (Objects.equals(enemyTank.getTankName(), "Spectre")) {
-                createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed());
-            } else {
-                createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed() * 2.0f);
-                createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed());
-                createEnemyBullet(enemyTank.getBulletType().getSpeed(), enemyTank.getBulletType().getSpeed() * 0.75f);
-            }
-            Config.getInstance().setPlayerOnesTurn();
-        }
-
-        @Override
-        public void render(float delta) {
+        
+        // Re-enable player shooting after computer's turn
+        canPlayerShoot = true;
+        Config.getInstance().setPlayerOnesTurn();
+    }
+    @Override
+    public void render(float delta) {
         stage.act(delta);
-            if (Config.getInstance().isPlayerOnesTurn()) {
-                Gdx.input.setInputProcessor(playerProcessor);
-                // check if the space bar is held
-                if (Gdx.input.isKeyPressed(Input.Keys.G)) {
-                    shootHoldTimer += Gdx.graphics.getDeltaTime();
-                }
-            } else {
-            // Process AI turn
-                processAITurn(delta);
-                
-                // Simulate continuous shooting mechanics
+        if (Config.getInstance().isPlayerOnesTurn()) {
+            Gdx.input.setInputProcessor(playerProcessor);
+            // check if the space bar is held
+            if (Gdx.input.isKeyPressed(Input.Keys.G)) {
                 shootHoldTimer += Gdx.graphics.getDeltaTime();
             }
-            Gdx.gl.glClearColor(0, 0, 0, 1);
-            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-            Batch batch = new SpriteBatch();
-            batch.begin();
+        } else {
+            // Process AI turn
+            processAITurn(delta);
 
-            batch.draw(battleScreenBackground, 0, 0);
-            batch.draw(battleScreenEarth, 750, 288);
-
-            batch.draw(battleScreenPlayer1, Config.getInstance().getPlayerTankPosition().x, Config.getInstance().getPlayerTankPosition().y);
-            batch.draw(battleScreenPlaye2, Config.getInstance().getEnemyTankPosition().x, Config.getInstance().getEnemyTankPosition().y);
-            batch.draw(battleScreenRedPlanet, 523, 299);
-            batch.draw(playerHealthBar, 207, 448, 277 * ((float) playerTank.getCurrentHealth() / playerTank.getHealthCapacity()), 45);
-            batch.draw(enemyHealthBar, 484, 448, 277 * ((float) enemyTank.getCurrentHealth() / enemyTank.getHealthCapacity()), 45);
-            batch.draw(battleScreenLogo, 404, 381);
-            batch.draw(battleScreenRock1, 3, 160);
-            batch.draw(battleScreenRock2, 264, 175);
-            batch.draw(battleScreenRock, 851, 194);
-            batch.draw(battleScreenSuperNova, 304, 299);
-            batch.draw(battleScreenWhitePlanet, 75, 303);
-            batch.draw(battleScreenGround, 0, 0);
-            batch.draw(playerTankFuel, 100, 81, 150 * ((float) playerTank.getFuelCapacity() / 5), 20);
-            batch.draw(enemyTankFuel, 700, 81, 150 * ((float) enemyTank.getFuelCapacity() / 5), 20);
-            try {
-                batch.draw(battleScreenPlayerTank, playerTank.getBody().getPosition().x - 45, playerTank.getBody().getPosition().y - 40);
-            } catch (NullPointerException e) {
-                System.out.println(battleScreenPlayerTank);
-                System.out.println(playerTank.getBody());
-                System.out.println(playerTank.getBody().getPosition());
-            }
-            batch.draw(battleScreenEnemyTank, enemyTank.getBody().getPosition().x - 30, enemyTank.getBody().getPosition().y - 40);
-//        batch.draw(BulletImage, bulletBody.getPosition().x - 5, bulletBody.getPosition().y - 5);
-            batch.end();
-            stage.draw();
-
-            // World2D
-            world.step(1 / 60f, 6, 2);
-
-            // Check for bullet-tank collision
-            CollisionRect bulletRect;
-            CollisionRect enemyTankRect = new CollisionRect((int) enemyTank.getBody().getPosition().x - 40, (int) enemyTank.getBody().getPosition().y - 40, 60 + 80, 40 + 80);
-            CollisionRect playerTankRect = new CollisionRect((int) playerTank.getBody().getPosition().x, (int) playerTank.getBody().getPosition().y, 60 + 10, 40 + 10);
-            Iterator<Bullet> iterator = bullets.iterator();
-
-            while (iterator.hasNext()) {
-                Bullet bullet = iterator.next();
-                bulletRect = new CollisionRect((int) bullet.getBody().getPosition().x, (int) bullet.getBody().getPosition().y, 40, 40);
-                if (bulletRect.collidesWith(enemyTankRect)) {
-                    enemyTank.getBody().applyLinearImpulse(bullet.getSpeed(), 0, enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
-                    enemyTank.getBody().setLinearDamping(1.0f);
-                    enemyTank.reduceHealth((int) bullet.getDamage());
-                    bullets.remove(bullet);
-                    world.destroyBody(bullet.getBody());
-
-                    // progressBar2.setValue(enemyTank.getCurrentHealth());
-                    System.out.println("Enemy tank health: " + enemyTank.getCurrentHealth());
-                    if (enemyTank.getCurrentHealth() <= 0) {
-                        batch.begin();
-                        batch.draw(pauseMenuOuterRectangle, 345, 39);
-                        batch.draw(pauseMenuBackground, 348, 42);
-                        batch.draw(pauseMenuGeneralImage, 398, 267);
-                        batch.draw(pauseMenuUpperRectangle, 384, 434);
-                        batch.draw(GameOverText, 419, 460);
-                        batch.draw(Player1WinsText, 391, 165);
-                        batch.draw(WinText, 395, 96);
-                        batch.end();
-                        pause();
-                        System.out.println("Enemy tank destroyed");
-                        world.destroyBody(enemyTank.getBody());
-                        Gdx.app.exit();
-                    }
-                    break;
-                }
-            }
-            iterator = enemyBullets.iterator();
-            while (iterator.hasNext()) {
-                Bullet bullet = iterator.next();
-                bulletRect = new CollisionRect((int) bullet.getBody().getPosition().x - 10, (int) bullet.getBody().getPosition().y - 10, 20 + 20, 20 + 20);
-                if (playerTankRect.collidesWith(bulletRect)) {
-                    playerTank.getBody().applyLinearImpulse(-bullet.getSpeed(), 0, playerTank.getBody().getPosition().x, playerTank.getBody().getPosition().y, true);
-                    playerTank.getBody().setLinearDamping(1.0f);
-                    playerTank.reduceHealth((int) bullet.getDamage());
-                    enemyBullets.remove(bullet);
-                    world.destroyBody(bullet.getBody());
-
-                    // progressBar1.setValue(playerTank.getCurrentHealth());
-                    System.out.println("Player tank health: " + playerTank.getCurrentHealth());
-                    if (playerTank.getCurrentHealth() <= 0) {
-                        batch.begin();
-                        batch.draw(pauseMenuOuterRectangle, 345, 39);
-                        batch.draw(pauseMenuBackground, 348, 42);
-                        batch.draw(pauseMenuGeneralImage, 398, 267);
-                        batch.draw(pauseMenuUpperRectangle, 384, 434);
-                        batch.draw(GameOverText, 419, 460);
-                        batch.draw(Player2WinsText, 391, 165);
-                        batch.draw(WinText, 395, 96);
-                        batch.end();
-                        pause();
-                        System.out.println("Player tank destroyed");
-                        world.destroyBody(playerTank.getBody());
-                        Gdx.app.exit();
-                    }
-                    break;
-                }
-            }
-
-            iterator = bullets.iterator();
-            while (iterator.hasNext()) {
-                Bullet bullet = iterator.next();
-                if (bullet.getBody().getPosition().x > 960 || bullet.getBody().getPosition().x < 0 || bullet.getBody().getPosition().y > 540 || bullet.getBody().getPosition().y < 205) {
-                    bullets.remove(bullet);
-                    world.destroyBody(bullet.getBody());
-                    break;
-                }
-            }
-
-            iterator = enemyBullets.iterator();
-            while (iterator.hasNext()) {
-                Bullet bullet = iterator.next();
-                if (bullet.getBody().getPosition().x > 960 || bullet.getBody().getPosition().x < 0 || bullet.getBody().getPosition().y > 540 || bullet.getBody().getPosition().y < 205) {
-                    enemyBullets.remove(bullet);
-                    world.destroyBody(bullet.getBody());
-                    break;
-                }
-            }
-
-            debugRenderer.render(world, camera.combined);
-            camera.update();
+            // Simulate continuous shooting mechanics
+            shootHoldTimer += Gdx.graphics.getDeltaTime();
         }
+        Gdx.gl.glClearColor(0, 0, 0, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Batch batch = new SpriteBatch();
+        batch.begin();
 
-        @Override
-        public void hide
-            
-        
-            () {
-        dispose();
-        }
+        batch.draw(battleScreenBackground, 0, 0);
+        batch.draw(battleScreenEarth, 750, 288);
 
-        @Override
-        public void dispose
-            
-        
-            () {
-        battleScreenSprite.dispose();
-            stage.dispose();
-            world.dispose();
-            debugRenderer.dispose();
-        }
-
-        @Override
-        public void pause
-            
-        
-            () {
+        batch.draw(battleScreenPlayer1, Config.getInstance().getPlayerTankPosition().x, Config.getInstance().getPlayerTankPosition().y);
+        batch.draw(battleScreenPlaye2, Config.getInstance().getEnemyTankPosition().x, Config.getInstance().getEnemyTankPosition().y);
+        batch.draw(battleScreenRedPlanet, 523, 299);
+        batch.draw(playerHealthBar, 207, 448, 277 * ((float) playerTank.getCurrentHealth() / playerTank.getHealthCapacity()), 45);
+        batch.draw(enemyHealthBar, 484, 448, 277 * ((float) enemyTank.getCurrentHealth() / enemyTank.getHealthCapacity()), 45);
+        batch.draw(battleScreenLogo, 404, 381);
+        batch.draw(battleScreenRock1, 3, 160);
+        batch.draw(battleScreenRock2, 264, 175);
+        batch.draw(battleScreenRock, 851, 194);
+        batch.draw(battleScreenSuperNova, 304, 299);
+        batch.draw(battleScreenWhitePlanet, 75, 303);
+        batch.draw(battleScreenGround, 0, 0);
+        batch.draw(playerTankFuel, 100, 81, 150 * ((float) playerTank.getFuelCapacity() / 5), 20);
+        batch.draw(enemyTankFuel, 700, 81, 150 * ((float) enemyTank.getFuelCapacity() / 5), 20);
         try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            batch.draw(battleScreenPlayerTank, playerTank.getBody().getPosition().x - 45, playerTank.getBody().getPosition().y - 40);
+        } catch (NullPointerException e) {
+            System.out.println(battleScreenPlayerTank);
+            System.out.println(playerTank.getBody());
+            System.out.println(playerTank.getBody().getPosition());
+        }
+        batch.draw(battleScreenEnemyTank, enemyTank.getBody().getPosition().x - 30, enemyTank.getBody().getPosition().y - 40);
+//        batch.draw(BulletImage, bulletBody.getPosition().x - 5, bulletBody.getPosition().y - 5);
+        batch.end();
+        stage.draw();
+
+        // World2D
+        world.step(1 / 60f, 6, 2);
+
+        // Check for bullet-tank collision
+        CollisionRect bulletRect;
+        CollisionRect enemyTankRect = new CollisionRect((int) enemyTank.getBody().getPosition().x - 40, (int) enemyTank.getBody().getPosition().y - 40, 60 + 80, 40 + 80);
+        CollisionRect playerTankRect = new CollisionRect((int) playerTank.getBody().getPosition().x, (int) playerTank.getBody().getPosition().y, 60 + 10, 40 + 10);
+        Iterator<Bullet> iterator = bullets.iterator();
+
+        while (iterator.hasNext()) {
+            Bullet bullet = iterator.next();
+            bulletRect = new CollisionRect((int) bullet.getBody().getPosition().x, (int) bullet.getBody().getPosition().y, 40, 40);
+            if (bulletRect.collidesWith(enemyTankRect)) {
+                enemyTank.getBody().applyLinearImpulse(bullet.getSpeed(), 0, enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
+                enemyTank.getBody().setLinearDamping(1.0f);
+                enemyTank.reduceHealth((int) bullet.getDamage());
+                bullets.remove(bullet);
+                world.destroyBody(bullet.getBody());
+
+                // progressBar2.setValue(enemyTank.getCurrentHealth());
+                System.out.println("Enemy tank health: " + enemyTank.getCurrentHealth());
+                if (enemyTank.getCurrentHealth() <= 0) {
+                    batch.begin();
+                    batch.draw(pauseMenuOuterRectangle, 345, 39);
+                    batch.draw(pauseMenuBackground, 348, 42);
+                    batch.draw(pauseMenuGeneralImage, 398, 267);
+                    batch.draw(pauseMenuUpperRectangle, 384, 434);
+                    batch.draw(GameOverText, 419, 460);
+                    batch.draw(Player1WinsText, 391, 165);
+                    batch.draw(WinText, 395, 96);
+                    batch.end();
+                    pause();
+                    System.out.println("Enemy tank destroyed");
+                    world.destroyBody(enemyTank.getBody());
+                    Gdx.app.exit();
+                }
+                break;
+            }
+        }
+        iterator = enemyBullets.iterator();
+        while (iterator.hasNext()) {
+            Bullet bullet = iterator.next();
+            bulletRect = new CollisionRect((int) bullet.getBody().getPosition().x - 10, (int) bullet.getBody().getPosition().y - 10, 20 + 20, 20 + 20);
+            if (playerTankRect.collidesWith(bulletRect)) {
+                playerTank.getBody().applyLinearImpulse(-bullet.getSpeed(), 0, playerTank.getBody().getPosition().x, playerTank.getBody().getPosition().y, true);
+                playerTank.getBody().setLinearDamping(1.0f);
+                playerTank.reduceHealth((int) bullet.getDamage());
+                enemyBullets.remove(bullet);
+                world.destroyBody(bullet.getBody());
+
+                // progressBar1.setValue(playerTank.getCurrentHealth());
+                System.out.println("Player tank health: " + playerTank.getCurrentHealth());
+                if (playerTank.getCurrentHealth() <= 0) {
+                    batch.begin();
+                    batch.draw(pauseMenuOuterRectangle, 345, 39);
+                    batch.draw(pauseMenuBackground, 348, 42);
+                    batch.draw(pauseMenuGeneralImage, 398, 267);
+                    batch.draw(pauseMenuUpperRectangle, 384, 434);
+                    batch.draw(GameOverText, 419, 460);
+                    batch.draw(Player2WinsText, 391, 165);
+                    batch.draw(WinText, 395, 96);
+                    batch.end();
+                    pause();
+                    System.out.println("Player tank destroyed");
+                    world.destroyBody(playerTank.getBody());
+                    Gdx.app.exit();
+                }
+                break;
             }
         }
 
-        @Override
-        public void resume
-        
-        
-        
-        
-        () {
+        iterator = bullets.iterator();
+        while (iterator.hasNext()) {
+            Bullet bullet = iterator.next();
+            if (bullet.getBody().getPosition().x > 960 || bullet.getBody().getPosition().x < 0 || bullet.getBody().getPosition().y > 540 || bullet.getBody().getPosition().y < 205) {
+                bullets.remove(bullet);
+                world.destroyBody(bullet.getBody());
+                break;
+            }
+        }
+
+        iterator = enemyBullets.iterator();
+        while (iterator.hasNext()) {
+            Bullet bullet = iterator.next();
+            if (bullet.getBody().getPosition().x > 960 || bullet.getBody().getPosition().x < 0 || bullet.getBody().getPosition().y > 540 || bullet.getBody().getPosition().y < 205) {
+                enemyBullets.remove(bullet);
+                world.destroyBody(bullet.getBody());
+                break;
+            }
+        }
+
+        debugRenderer.render(world, camera.combined);
+        camera.update();
     }
 
     @Override
-        public void resize
-        (int width, int height
+    public void hide() {
+        dispose();
+    }
 
+    @Override
+    public void dispose() {
+        battleScreenSprite.dispose();
+        stage.dispose();
+        world.dispose();
+        debugRenderer.dispose();
+    }
 
-    
-        
-        
+    @Override
+    public void pause() {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
+    @Override
+    public void resume() {
+    }
 
-    
-        ) {
+    @Override
+    public void resize(int width, int height
+    ) {
     }
 }
