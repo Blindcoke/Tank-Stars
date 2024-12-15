@@ -79,7 +79,7 @@ public class HomeScreen extends TankStarsScreen {
         computerButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new StartScreen(game));
+                game.setScreen(new StartScreenComputer(game));
             }
         });
         computerButton.setPosition(601, 147);
