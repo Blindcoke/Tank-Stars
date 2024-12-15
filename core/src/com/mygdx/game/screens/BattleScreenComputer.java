@@ -147,6 +147,34 @@ public class BattleScreenComputer extends TankStarsScreen {
         enemyTankBody.createFixture(enemyTankShape, 0.0f);
         enemyTank.setBody(enemyTankBody);
         enemyTankShape.dispose();
+
+        BodyDef leftBorderDef = new BodyDef();
+        leftBorderDef.type = BodyDef.BodyType.StaticBody;
+        leftBorderDef.position.set(new Vector2(0, 0));
+        Body leftBorder = world.createBody(leftBorderDef);
+        
+        PolygonShape leftBorderShape = new PolygonShape();
+        leftBorderShape.setAsBox(1, 540 / 2f); // Height of the screen is 540
+        FixtureDef leftFixtureDef = new FixtureDef();
+        leftFixtureDef.shape = leftBorderShape;
+        leftFixtureDef.friction = 0.5f;
+        leftFixtureDef.restitution = 0.3f;
+        leftBorder.createFixture(leftFixtureDef);
+        leftBorderShape.dispose();
+
+        BodyDef rightBorderDef = new BodyDef();
+        rightBorderDef.type = BodyDef.BodyType.StaticBody;
+        rightBorderDef.position.set(new Vector2(960, 0)); // Width of the screen is 960
+        Body rightBorder = world.createBody(rightBorderDef);
+        
+        PolygonShape rightBorderShape = new PolygonShape();
+        rightBorderShape.setAsBox(1, 540 / 2f);
+        FixtureDef rightFixtureDef = new FixtureDef();
+        rightFixtureDef.shape = rightBorderShape;
+        rightFixtureDef.friction = 0.5f;
+        rightFixtureDef.restitution = 0.3f;
+        rightBorder.createFixture(rightFixtureDef);
+        rightBorderShape.dispose();
     }
 
     public void createBullet(float speedX, float speedY) {
