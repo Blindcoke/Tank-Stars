@@ -62,9 +62,8 @@ public class TankChangeScreenComputer extends TankStarsScreen {
 
         // Randomly select enemy tank
         Random random = new Random();
-        do {
-            enemyTankIndex = random.nextInt(3);
-        } while (enemyTankIndex == playerTankIndex);
+        enemyTankIndex = random.nextInt(3);
+        
 
         TankChangeScreenPlayer1Tank = tankTextureRegions[playerTankIndex];
 
