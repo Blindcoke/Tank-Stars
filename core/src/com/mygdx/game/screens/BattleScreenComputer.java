@@ -1,6 +1,5 @@
 package com.mygdx.game.screens;
 
-import java.util.Random;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -13,36 +12,28 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
-import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.mygdx.game.*;
-import com.badlogic.gdx.math.Rectangle;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Objects;
 
-import static java.lang.Thread.sleep;
 
 public class BattleScreenComputer extends TankStarsScreen {
 
     private int aiDecisionTimer = 0;
-    private static final int DECISION_INTERVAL = 60; // Make a decision every second (assuming 60 FPS)
-    private Random random = new Random();
+    private static final int DECISION_INTERVAL = 60;
     private boolean canPlayerShoot = true;
-    int winner;
 
     private enum Action {
         MOVE_TOWARDS_PLAYER, // Move the AI tank closer to the player
         EVADE, // Evade incoming bullets
         SHOOT, // Shoot at the player
-        STOP                  // Stop moving (optional, can be used for idle state)
     }
 
-    private Batch batch;
     private Stage stage;
 
     // Images
@@ -64,9 +55,7 @@ public class BattleScreenComputer extends TankStarsScreen {
     private TextureRegion battleScreenBackground;
     private TextureRegion battleScreenEarth;
     private TextureRegion battleScreenLogo;
-    private TextureRegion battleScreenPlayer1Health;
     private TextureRegion battleScreenPlayer1;
-    private TextureRegion battleScreenPlayer2Health;
     private TextureRegion battleScreenPlaye2;
     private TextureRegion battleScreenRedPlanet;
     private TextureRegion battleScreenRock1;
@@ -82,8 +71,6 @@ public class BattleScreenComputer extends TankStarsScreen {
     ImageButton.ImageButtonStyle style;
     ImageButton menubutton;
 
-    ProgressBar progressBar1;
-    ProgressBar progressBar2;
 
     private Texture playerHealthBar = new Texture("BattleScreen/player 1 health.png");
     private Texture playerTankFuel = new Texture("BattleScreen/player 1 fuel.png");
@@ -95,15 +82,12 @@ public class BattleScreenComputer extends TankStarsScreen {
     private World world;
     private Box2DDebugRenderer debugRenderer;
     private OrthographicCamera camera;
-    private Vector2 movement = new Vector2();
     private Body ground;
     private Body playerTankBody;
     private Body enemyTankBody;
     private Body bulletBody;
     private ChainShape groundShape;
-    //    private ArrayList<Bullet> bullets = new ArrayList<Bullet>();
     private Collection<Bullet> bullets = new ArrayList<Bullet>();
-    //    private ArrayList<Bullet> enemyBullets = new ArrayList<Bullet>();
     private Collection<Bullet> enemyBullets = new ArrayList<Bullet>();
     private ArrayList<Vector2> groundCoords = new ArrayList<Vector2>();
 
@@ -113,7 +97,6 @@ public class BattleScreenComputer extends TankStarsScreen {
     private float shootHoldTimer = 0;
 
     private InputProcessor playerProcessor;
-    private InputProcessor enemyProcessor;
 
     public BattleScreenComputer(Game game) {
         super(game);
@@ -154,7 +137,7 @@ public class BattleScreenComputer extends TankStarsScreen {
         enemyTankBody = world.createBody(enemyTankBodyDef);
         PolygonShape enemyTankShape = new PolygonShape();
         // Reduce the size of the box to make it tighter to the tank image
-        enemyTankShape.setAsBox(40, 30); // Reduced from 60, 40
+        enemyTankShape.setAsBox(40, 30);
         enemyTankBody.createFixture(enemyTankShape, 0.0f);
         enemyTank.setBody(enemyTankBody);
         enemyTankShape.dispose();
@@ -165,7 +148,7 @@ public class BattleScreenComputer extends TankStarsScreen {
         Body leftBorder = world.createBody(leftBorderDef);
 
         PolygonShape leftBorderShape = new PolygonShape();
-        leftBorderShape.setAsBox(1, 540 / 2f); // Height of the screen is 540
+        leftBorderShape.setAsBox(1, 540 / 2f);
         FixtureDef leftFixtureDef = new FixtureDef();
         leftFixtureDef.shape = leftBorderShape;
         leftFixtureDef.friction = 0.5f;
@@ -175,7 +158,7 @@ public class BattleScreenComputer extends TankStarsScreen {
 
         BodyDef rightBorderDef = new BodyDef();
         rightBorderDef.type = BodyDef.BodyType.StaticBody;
-        rightBorderDef.position.set(new Vector2(960, 0)); // Width of the screen is 960
+        rightBorderDef.position.set(new Vector2(960, 0));
         Body rightBorder = world.createBody(rightBorderDef);
 
         PolygonShape rightBorderShape = new PolygonShape();
@@ -189,7 +172,7 @@ public class BattleScreenComputer extends TankStarsScreen {
     }
 
     public void createBullet(float speedX, float speedY) {
-        shootHoldTimer = (shootHoldTimer + 1) * 2; // +1 to set the base as 1 instead of 0, *2 to make it faster to charge up shots.
+        shootHoldTimer = (shootHoldTimer + 1) * 2;
         if (shootHoldTimer > 2.5f) {
             shootHoldTimer = 2.5f;
         }
@@ -203,7 +186,6 @@ public class BattleScreenComputer extends TankStarsScreen {
         bulletBody.createFixture(bulletShape, 0.0f);
         bulletShape.dispose();
         if (Objects.equals(playerTank.getTankName(), "Buratino")) {
-//            bulletBody.setLinearVelocity(playerTank.getBulletType().getSpeed(), 0);
             bulletBody.applyForceToCenter(speedX, speedY, true);
             // set bullet gravity to 0
             bulletBody.setGravityScale(0);
@@ -225,7 +207,7 @@ public class BattleScreenComputer extends TankStarsScreen {
     }
 
     public void createEnemyBullet(float speedX, float speedY) {
-        shootHoldTimer = (shootHoldTimer + 1) * 2; // +1 to set the base as 1 instead of 0, *2 to make it faster to charge up shots.
+        shootHoldTimer = (shootHoldTimer + 1) * 2;
         if (shootHoldTimer > 2.5f) {
             shootHoldTimer = 2.5f;
         }
@@ -238,7 +220,6 @@ public class BattleScreenComputer extends TankStarsScreen {
         bulletBody.createFixture(bulletShape, 0.0f);
         bulletShape.dispose();
         if (Objects.equals(enemyTank.getTankName(), "Buratino")) {
-//            bulletBody.setLinearVelocity(-enemyTank.getBulletType().getSpeed(), 0);
             bulletBody.applyForceToCenter(-speedX * 100f, speedY, true);
             bulletBody.setGravityScale(0);
             enemyTank.setFuelCapacity(5);
@@ -264,9 +245,7 @@ public class BattleScreenComputer extends TankStarsScreen {
         battleScreenBackground = new TextureRegion(battleScreenSprite, 0, 454, 960, 540);
         battleScreenEarth = new TextureRegion(battleScreenSprite, 596, 51, 153, 156);
         battleScreenLogo = new TextureRegion(battleScreenSprite, 449, 51, 147, 149);
-        battleScreenPlayer1Health = new TextureRegion(battleScreenSprite, 261, 0, 277, 45);
         battleScreenPlayer1 = new TextureRegion(battleScreenSprite, 73, 0, 77, 26);
-        battleScreenPlayer2Health = new TextureRegion(battleScreenSprite, 590, 0, 269, 49);
         battleScreenPlaye2 = new TextureRegion(battleScreenSprite, 0, 0, 73, 19);
         battleScreenRedPlanet = new TextureRegion(battleScreenSprite, 174, 51, 81, 67);
         battleScreenRock1 = new TextureRegion(battleScreenSprite, 538, 0, 52, 47);
@@ -280,8 +259,6 @@ public class BattleScreenComputer extends TankStarsScreen {
         battleBulletRed = new Texture("BattleScreen/BulletRed.png");
         battleScreenPlayerTank = playerTank.getTextureRegion();
         battleScreenEnemyTank = enemyTank.getTextureRegion();
-//        battleScreenPlayerTank = new TextureRegion(battleScreenSprite, 0, 51, 86, 56);
-//        battleScreenEnemyTank = new TextureRegion(battleScreenSprite, 86, 51, 88, 62);
 
         GameOverText = new Texture("PauseMenu/GameOver.png");
         Player1WinsText = new Texture("PauseMenu/Player1.png");
@@ -544,36 +521,6 @@ public class BattleScreenComputer extends TankStarsScreen {
         enemyTank.getBody().setLinearVelocity(0, 0);
     }
 
-    public class CollisionHelper {
-
-        public boolean checkPreciseCollision(Vector2 bulletPos, Vector2 tankPos, float bulletWidth, float bulletHeight, float tankWidth, float tankHeight) {
-            // Create precise rectangles for bullet and tank
-            Rectangle bulletRect = new Rectangle(
-                    bulletPos.x - bulletWidth / 2,
-                    bulletPos.y - bulletHeight / 2,
-                    bulletWidth,
-                    bulletHeight
-            );
-
-            Rectangle tankRect = new Rectangle(
-                    tankPos.x - tankWidth / 2,
-                    tankPos.y - tankHeight / 2,
-                    tankWidth,
-                    tankHeight
-            );
-
-            return bulletRect.overlaps(tankRect);
-        }
-
-        public Vector2 calculateBulletImpactForce(Vector2 bulletVelocity) {
-            // Calculate impact force based on bullet velocity
-            float impactMultiplier = 50f; // Adjust this value to change impact strength
-            return new Vector2(
-                    bulletVelocity.x * impactMultiplier,
-                    bulletVelocity.y * impactMultiplier
-            );
-        }
-    }
 
     @Override
     public void render(float delta) {
@@ -715,14 +662,14 @@ public class BattleScreenComputer extends TankStarsScreen {
 
         Iterator<Bullet> bulletIterator = bullets.iterator();
         while (bulletIterator.hasNext()) {
-            if (handleBulletCollision(bulletIterator.next(), enemyTank, enemyTankRect)) {
+            if (handleBulletToTankCollision(bulletIterator.next(), enemyTank, enemyTankRect)) {
                 bulletIterator.remove();
             }
         }
 
         Iterator<Bullet> enemyBulletIterator = enemyBullets.iterator();
         while (enemyBulletIterator.hasNext()) {
-            if (handleBulletCollision(enemyBulletIterator.next(), playerTank, playerTankRect)) {
+            if (handleBulletToTankCollision(enemyBulletIterator.next(), playerTank, playerTankRect)) {
                 enemyBulletIterator.remove();
             }
         }
@@ -739,7 +686,7 @@ public class BattleScreenComputer extends TankStarsScreen {
         );
     }
 
-    private boolean handleBulletCollision(Bullet bullet, Tank targetTank, CollisionRect targetTankRect) {
+    private boolean handleBulletToTankCollision(Bullet bullet, Tank targetTank, CollisionRect targetTankRect) {
         CollisionRect bulletRect = new CollisionRect(
                 (int) bullet.getBody().getPosition().x,
                 (int) bullet.getBody().getPosition().y,
