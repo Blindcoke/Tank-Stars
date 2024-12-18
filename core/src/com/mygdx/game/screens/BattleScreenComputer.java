@@ -384,7 +384,7 @@ public class BattleScreenComputer extends TankStarsScreen {
                         if (Objects.equals(playerTank.getTankName(), "Buratino")) {
                             createBullet(playerTank.getBulletType().getSpeed()*100, 0);
                         } else if (Objects.equals(playerTank.getTankName(), "Spectre")) {
-                            createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed());
+                            createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed()*100);
                         } else {
                             createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed() * 2.0f);
                             createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed());
