@@ -382,13 +382,13 @@ public class BattleScreenComputer extends TankStarsScreen {
                     if (canPlayerShoot) {
                         System.out.println("Shoot hold timer: " + shootHoldTimer);
                         if (Objects.equals(playerTank.getTankName(), "Buratino")) {
-                            createBullet(playerTank.getBulletType().getSpeed()*100, 0);
+                            createBullet(playerTank.getBulletType().getSpeed() * 100, 0);
                         } else if (Objects.equals(playerTank.getTankName(), "Spectre")) {
-                            createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed()*100);
+                            createBullet(playerTank.getBulletType().getSpeed() * 100, playerTank.getBulletType().getSpeed() * 100);
                         } else {
-                            createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed() * 2.0f);
-                            createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed());
-                            createBullet(playerTank.getBulletType().getSpeed()*100, playerTank.getBulletType().getSpeed() * 0.75f);
+                            createBullet(playerTank.getBulletType().getSpeed() * 100, playerTank.getBulletType().getSpeed() * 2.0f);
+                            createBullet(playerTank.getBulletType().getSpeed() * 100, playerTank.getBulletType().getSpeed());
+                            createBullet(playerTank.getBulletType().getSpeed() * 100, playerTank.getBulletType().getSpeed() * 0.75f);
                         }
 
                         // Prevent player from shooting again until computer's turn
@@ -453,18 +453,15 @@ public class BattleScreenComputer extends TankStarsScreen {
             for (int i = 0; i < 1000; i++) {
                 if (simulateEvasion(enemyTank, bullets)) {
                     evade++;
-                }
-                else if (simulateMoveTowardsPlayer(enemyTank, playerTank)) {
+                } else if (simulateMoveTowardsPlayer(enemyTank, playerTank)) {
                     moveTowardsPlayer++;
-                }
-                else {
+                } else {
                     shoot++;
                 }
             }
             System.out.println("Best action probabilities: Move towards player: " + moveTowardsPlayer + ", Evade: " + evade + ", Shoot: " + shoot);
             return chooseBestAction(moveTowardsPlayer, shoot, evade);
         }
-
 
         private boolean simulateMoveTowardsPlayer(Tank enemy, Tank player) {
             float distance = player.getBody().getPosition().dst(enemy.getBody().getPosition());
@@ -484,11 +481,6 @@ public class BattleScreenComputer extends TankStarsScreen {
                 }
             }
             return false;
-        }
-
-
-        private boolean simulateShoot(Tank enemy, Tank player) {
-            return isShotReachable(player.getBody().getPosition(), enemy.getBody().getPosition());
         }
 
         private Action chooseBestAction(int move, int shoot, int evade) {
@@ -513,7 +505,6 @@ public class BattleScreenComputer extends TankStarsScreen {
         applyMovement(direction * enemyTank.getMoveSpeed(), "AI evading incoming bullets.");
 
     }
-
 
     private void moveAITankTowardsPlayer(Vector2 playerPos, Vector2 enemyPos) {
         float optimalDistance = 200f;
@@ -818,21 +809,6 @@ public class BattleScreenComputer extends TankStarsScreen {
     private boolean isOffScreen(Bullet bullet) {
         return bullet.getBody().getPosition().x > 960 || bullet.getBody().getPosition().x < 0
                 || bullet.getBody().getPosition().y > 540 || bullet.getBody().getPosition().y < 205;
-    }
-
-    private void handleGameOver(Batch batch, String winnerMessage) {
-        batch.begin();
-        batch.draw(pauseMenuOuterRectangle, 345, 39);
-        batch.draw(pauseMenuBackground, 348, 42);
-        batch.draw(pauseMenuGeneralImage, 398, 267);
-        batch.draw(pauseMenuUpperRectangle, 384, 434);
-        batch.draw(GameOverText, 419, 460);
-        batch.draw(winnerMessage.equals("Player 1 Wins!") ? Player1WinsText : Player2WinsText, 391, 165);
-        batch.draw(WinText, 395, 96);
-        batch.end();
-        pause();
-        System.out.println(winnerMessage);
-        Gdx.app.exit();
     }
 
     @Override
