@@ -339,11 +339,13 @@ public class BattleScreenComputer extends TankStarsScreen {
 
                 if (keycode == Input.Keys.A && playerTank.getFuelCapacity() > 0) {
                     playerTank.getBody().applyLinearImpulse((float) -playerTank.getMoveSpeed(), 0, playerTank.getBody().getPosition().x, playerTank.getBody().getPosition().y, true);
+                    playerTank.getBody().setLinearDamping(1.0f);
                     playerTank.setFuelCapacity(playerTank.getFuelCapacity() - 1);
                     System.out.println("Player Fuel capacity: " + playerTank.getFuelCapacity());
                 }
                 if (keycode == Input.Keys.D && playerTank.getFuelCapacity() > 0) {
                     playerTank.getBody().applyLinearImpulse((float) playerTank.getMoveSpeed(), 0, playerTank.getBody().getPosition().x, playerTank.getBody().getPosition().y, true);
+                    playerTank.getBody().setLinearDamping(1.0f);
                     playerTank.setFuelCapacity(playerTank.getFuelCapacity() - 1);
                     System.out.println("Player Fuel capacity: " + playerTank.getFuelCapacity());
                 }
@@ -527,6 +529,7 @@ public class BattleScreenComputer extends TankStarsScreen {
 
     private void applyMovement(float speed, String actionDescription) {
         enemyTank.getBody().applyLinearImpulse(speed, 0, enemyTank.getBody().getPosition().x, enemyTank.getBody().getPosition().y, true);
+        enemyTank.getBody().setLinearDamping(1.0f);
         enemyTank.setFuelCapacity(enemyTank.getFuelCapacity() - 1);
         System.out.println(actionDescription + " Fuel: " + enemyTank.getFuelCapacity());
     }
